@@ -1,10 +1,12 @@
-#!/usr/bin/python
-import sys
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 from xml.sax.handler import ContentHandler
 from xml.sax import make_parser
-import sys
 import redis
-from unidecode import *
+import argparse
+import zipfile
+
 
 class DocumentHandler(ContentHandler):
     def __init__(self, server, host):
@@ -16,10 +18,9 @@ class DocumentHandler(ContentHandler):
         self.nbuf = []
         self.currenthash = ""
         self.currentfilename = ""
-        #Init database
-        self.red = redis.Redis(host="127.0.0.1", port=8323, db=0)
+        # Init database
+        self.red = redis.Redis(host=server, port=host, db=0)
         self.pipe = self.red.pipeline()
-
 
     def startElement(self, name, attrs):
         if name == "sha256":
@@ -27,7 +28,7 @@ class DocumentHandler(ContentHandler):
         if name == "filename":
             self.inFileName = True
 
-    def endElement(self,name):
+    def endElement(self, name):
         if name == "filename":
             self.inFileName = False
             self.currentfilename = "".join(self.nbuf)
@@ -35,15 +36,15 @@ class DocumentHandler(ContentHandler):
 
         if name == "sha256":
             self.inSha256 = False
-            self.currenthash =  "".join(self.buf)
+            self.currenthash = "".join(self.buf)
             self.buf = []
 
         if len(self.currenthash) > 0 and len(self.currentfilename) > 0:
             if len(self.hashes) == self.pipelinesize:
-                #Put hashes in leveldb
-                for (h,f) in self.hashes:
-                    #FIXME python leveldb python wrapper does not handle unicode values correctly
-                    self.pipe.set(h,f)
+                # Put hashes in leveldb
+                for (h, f) in self.hashes:
+                    # FIXME python leveldb python wrapper does not handle unicode values correctly
+                    self.pipe.set(h, f)
                 self.pipe.execute()
                 self.hashes = []
             else:
@@ -51,7 +52,7 @@ class DocumentHandler(ContentHandler):
                 self.currenthash = ""
                 self.currentfilename = ""
 
-    def  characters(self,content):
+    def characters(self, content):
         if self.inSha256:
             self.buf.append(content)
         if self.inFileName:
@@ -60,14 +61,24 @@ class DocumentHandler(ContentHandler):
     def terminate(self):
         self.pipe.execute()
 
-document = DocumentHandler("127.0.0.1", 8323)
-saxparser = make_parser()
-saxparser.setContentHandler(document)
 
-filename=sys.argv[1]
-print "#Processing filename",filename
-datasource = open(filename,"r")
-saxparser.parse(datasource)
+if __name__ == '__main__':
 
-document.terminate()
+    parser = argparse.ArgumentParser(description='Parse an XML whitelist file.')
+    parser.add_argument("-f", "--file", required=True, help="File to parse.")
+    args = parser.parse_args()
 
+    document = DocumentHandler("127.0.0.1", 8323)
+    saxparser = make_parser()
+    saxparser.setContentHandler(document)
+
+    print("#Processing filename", args.file)
+
+    if zipfile.is_zipfile(args.file):
+        with zipfile.ZipFile(args.file, 'r') as datasource:
+            with datasource.open(datasource.namelist()[0]) as content:
+                saxparser.parse(content)
+    else:
+        with open(args.file, "r") as datasource:
+            saxparser.parse(datasource)
+    document.terminate()
