@@ -17,6 +17,8 @@ class DocumentHandler(ContentHandler):
         self.inFileName = False
         # Init database
         red = redis.Redis(host=server, port=host, db=0)
+        if red.sismember("FILES", origin_file):
+            raise IOError("Skip filename " +  origin_file + " as it is already processed")
         self.pipe = red.pipeline()
 
     def startElement(self, name, attrs):
@@ -50,6 +52,7 @@ class DocumentHandler(ContentHandler):
             self.filename += content
 
     def terminate(self):
+        self.pipe.sadd("FILES", self.origin_file)
         self.pipe.execute()
 
 
