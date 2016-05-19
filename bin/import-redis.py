@@ -11,16 +11,18 @@ import sys
 
 class DocumentHandler(ContentHandler):
     def __init__(self, server, host, origin_file):
+        self.pipeline_max = 100000
+        self.cur_pipeline = 0
         self.origin_file = origin_file
         self.sha256 = ''
         self.filename = ''
         self.inSha256 = False
         self.inFileName = False
         # Init database
-        red = redis.Redis(host=server, port=host, db=0)
-        if red.sismember("FILES", origin_file):
+        self.red = redis.Redis(host=server, port=host, db=0)
+        if self.red.sismember("FILES", origin_file):
             raise IOError("Skip filename " + origin_file + " as it is already processed")
-        self.pipe = red.pipeline()
+        self.pipe = self.red.pipeline()
 
     def startElement(self, name, attrs):
         if name == "sha256":
@@ -45,6 +47,11 @@ class DocumentHandler(ContentHandler):
             # self.pipe.sadd(self.sha256[:16], self.sha256[16:])  # 746.24M / 2337799 Keys
             # self.pipe.sadd(self.sha256[:8], self.sha256[8:])  # 710.45M / 2337184 Keys
             self.pipe.sadd(self.sha256[:4], self.sha256[4:])  # 296.74M / 118164 Keys
+            self.cur_pipeline += 1
+        if self.cur_pipeline >= self.pipeline_max:
+            self.pipe.execute()
+            self.cur_pipeline = 0
+            self.pipe = self.red.pipeline()
 
     def characters(self, content):
         if self.inSha256:
