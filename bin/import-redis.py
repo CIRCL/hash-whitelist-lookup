@@ -18,7 +18,7 @@ class DocumentHandler(ContentHandler):
         # Init database
         red = redis.Redis(host=server, port=host, db=0)
         if red.sismember("FILES", origin_file):
-            raise IOError("Skip filename " +  origin_file + " as it is already processed")
+            raise IOError("Skip filename " + origin_file + " as it is already processed")
         self.pipe = red.pipeline()
 
     def startElement(self, name, attrs):
@@ -70,8 +70,9 @@ if __name__ == '__main__':
 
     if zipfile.is_zipfile(args.file):
         with zipfile.ZipFile(args.file, 'r') as datasource:
-            with datasource.open(datasource.namelist()[0]) as content:
-                saxparser.parse(content)
+            for name in datasource.namelist():
+                with datasource.open(name) as content:
+                    saxparser.parse(content)
     else:
         with open(args.file, "r") as datasource:
             saxparser.parse(datasource)
