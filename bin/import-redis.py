@@ -19,7 +19,7 @@ class DocumentHandler(ContentHandler):
         # Init database
         red = redis.Redis(host=server, port=host, db=0)
         if red.sismember("FILES", origin_file):
-            raise IOError("Skip filename " +  origin_file + " as it is already processed")
+            raise IOError("Skip filename " + origin_file + " as it is already processed")
         self.pipe = red.pipeline()
 
     def startElement(self, name, attrs):
