@@ -2,11 +2,12 @@
 # -*- coding: utf-8 -*-
 
 from xml.sax.handler import ContentHandler
+from  xml.sax._exceptions import SAXParseException
 from xml.sax import make_parser
 import redis
 import argparse
 import zipfile
-
+import sys
 
 class DocumentHandler(ContentHandler):
     def __init__(self, server, host, origin_file):
@@ -70,8 +71,12 @@ if __name__ == '__main__':
 
     if zipfile.is_zipfile(args.file):
         with zipfile.ZipFile(args.file, 'r') as datasource:
-            with datasource.open(datasource.namelist()[0]) as content:
-                saxparser.parse(content)
+            for name in datasource.namelist():
+                with datasource.open(name) as content:
+                    try:
+                        saxparser.parse(content)
+                    except SAXParseException,e:
+                        sys.stderr.write("Failed to parse "+name + " in " +args.file + "\n")
     else:
         with open(args.file, "r") as datasource:
             saxparser.parse(datasource)
