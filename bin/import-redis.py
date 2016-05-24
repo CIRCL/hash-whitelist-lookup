@@ -8,6 +8,7 @@ import redis
 import argparse
 import zipfile
 import sys
+import syslog
 
 class DocumentHandler(ContentHandler):
     def __init__(self, server, host, origin_file):
@@ -74,7 +75,7 @@ if __name__ == '__main__':
     saxparser = make_parser()
     saxparser.setContentHandler(document)
 
-    print("#Processing filename", args.file)
+    syslog.syslog("#Processing filename "+ args.file)
 
     if zipfile.is_zipfile(args.file):
         with zipfile.ZipFile(args.file, 'r') as datasource:
