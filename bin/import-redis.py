@@ -84,7 +84,7 @@ if __name__ == '__main__':
                     try:
                         saxparser.parse(content)
                     except SAXParseException,e:
-                        sys.stderr.write("Failed to parse "+name + " in " +args.file + "\n")
+                        syslog.syslog("Failed to parse "+name + " in " +args.file )
     else:
         with open(args.file, "r") as datasource:
             saxparser.parse(datasource)
