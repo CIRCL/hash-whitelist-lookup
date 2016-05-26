@@ -61,7 +61,6 @@ class DocumentHandler(ContentHandler):
             self.filename += content
 
     def terminate(self):
-        self.pipe.sadd("FILES", self.origin_file)
         self.pipe.execute()
 
 
@@ -83,6 +82,7 @@ if __name__ == '__main__':
                 with datasource.open(name) as content:
                     try:
                         saxparser.parse(content)
+                        document.pipe.sadd("FILES", document.origin_file)
                     except SAXParseException,e:
                         syslog.syslog("Failed to parse "+name + " in " +args.file )
     else:
