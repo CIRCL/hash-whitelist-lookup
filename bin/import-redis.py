@@ -89,6 +89,7 @@ if __name__ == '__main__':
         with open(args.file, "r") as datasource:
             try:
                 saxparser.parse(datasource)
+                document.pipe.sadd("FILES", document.origin_file)
             except SAXParseException,e:
                 syslog.syslog("Failed to parse file " + args.file)
     document.terminate()
