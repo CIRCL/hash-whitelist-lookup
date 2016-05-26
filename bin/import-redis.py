@@ -87,5 +87,8 @@ if __name__ == '__main__':
                         syslog.syslog("Failed to parse "+name + " in " +args.file )
     else:
         with open(args.file, "r") as datasource:
-            saxparser.parse(datasource)
+            try:
+                saxparser.parse(datasource)
+            except SAXParseException,e:
+                syslog.syslog("Failed to parse file " + args.file)
     document.terminate()
