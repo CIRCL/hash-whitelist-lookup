@@ -9,7 +9,7 @@ import argparse
 import zipfile
 import sys
 import syslog
-
+import traceback
 class DocumentHandler(ContentHandler):
     def __init__(self, server, host, origin_file):
         self.pipeline_max = 100000
@@ -66,30 +66,33 @@ class DocumentHandler(ContentHandler):
 
 if __name__ == '__main__':
 
-    parser = argparse.ArgumentParser(description='Parse an XML whitelist file.')
-    parser.add_argument("-f", "--file", required=True, help="File to parse.")
-    args = parser.parse_args()
+    try:
+        parser = argparse.ArgumentParser(description='Parse an XML whitelist file.')
+        parser.add_argument("-f", "--file", required=True, help="File to parse.")
+        args = parser.parse_args()
 
-    document = DocumentHandler("127.0.0.1", 8323, args.file)
-    saxparser = make_parser()
-    saxparser.setContentHandler(document)
+        document = DocumentHandler("127.0.0.1", 8323, args.file)
+        saxparser = make_parser()
+        saxparser.setContentHandler(document)
 
-    syslog.syslog("#Processing filename "+ args.file)
+        syslog.syslog("#Processing filename "+ args.file)
 
-    if zipfile.is_zipfile(args.file):
-        with zipfile.ZipFile(args.file, 'r') as datasource:
-            for name in datasource.namelist():
-                with datasource.open(name) as content:
-                    try:
-                        saxparser.parse(content)
-                    except SAXParseException,e:
-                        syslog.syslog("Failed to parse "+name + " in " +args.file )
-        document.pipe.sadd("FILES", document.origin_file)
-    else:
-        with open(args.file, "r") as datasource:
-            try:
-                saxparser.parse(datasource)
-                document.pipe.sadd("FILES", document.origin_file)
-            except SAXParseException,e:
-                syslog.syslog("Failed to parse file " + args.file)
-    document.terminate()
+        if zipfile.is_zipfile(args.file):
+            with zipfile.ZipFile(args.file, 'r') as datasource:
+                for name in datasource.namelist():
+                    with datasource.open(name) as content:
+                        try:
+                            saxparser.parse(content)
+                        except SAXParseException,e:
+                            syslog.syslog("Failed to parse "+name + " in " +args.file )
+            document.pipe.sadd("FILES", document.origin_file)
+        else:
+            with open(args.file, "r") as datasource:
+                try:
+                    saxparser.parse(datasource)
+                    document.pipe.sadd("FILES", document.origin_file)
+                except SAXParseException,e:
+                    syslog.syslog("Failed to parse file " + args.file)
+        document.terminate()
+    except Exception as e:
+        syslog.syslog(traceback.format_exc())
