@@ -49,6 +49,10 @@ class DocumentHandler(ContentHandler):
             # self.pipe.sadd(self.sha256[:8], self.sha256[8:])  # 710.45M / 2337184 Keys
             self.pipe.sadd(self.sha256[:4], self.sha256[4:])  # 296.74M / 118164 Keys
             self.cur_pipeline += 1
+            #Avoid to import entry multiple times
+            self.sha256 = ''
+            self.filename = ''
+
         if self.cur_pipeline >= self.pipeline_max:
             self.pipe.execute()
             self.cur_pipeline = 0
